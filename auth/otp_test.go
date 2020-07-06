@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/pquerna/otp/totp"
-
 	"github.com/stretchr/testify/assert"
 )
 

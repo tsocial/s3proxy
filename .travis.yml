@@ -4,7 +4,8 @@ go:
   - "1.10"
 
 before_install:
-  - eval "$(gimme 1.12)"
+  - eval "$(gimme 1.14)"
+  - go mod download
 
 services:
   - docker

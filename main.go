@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,12 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"bytes"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	xj "github.com/basgys/goxml2json"
 	"github.com/gorilla/mux"
 )
 
@@ -55,8 +55,8 @@ var (
 func main() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 	c = configFromEnvironmentVariables()
-
 	m := mux.NewRouter()
+
 	m.HandleFunc("/--version", func(w http.ResponseWriter, r *http.Request) {
 		if len(version) > 0 && len(date) > 0 {
 			if _, err := fmt.Fprintf(w, "version: %s (built at %s)\n", version, date); err != nil {
@@ -270,6 +270,7 @@ func wrapper(f func(w http.ResponseWriter, r *http.Request)) http.Handler {
 			w.Header().Set("Access-Control-Allow-Headers", c.corsAllowHeaders)
 			w.Header().Set("Access-Control-Max-Age", strconv.FormatInt(c.corsMaxAge, 10))
 		}
+
 		if (len(c.basicAuthUser) > 0) && (len(c.basicAuthPass) > 0) && !basicAuth(r) && !isHealthCheckPath(r) {
 			w.Header().Set("WWW-Authenticate", `Basic realm="REALM"`)
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -330,10 +331,22 @@ func awss3(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setHeadersFromAwsResponse(w, obj)
+	body := io.Reader(obj.Body)
 
-	if _, err := io.Copy(w, obj.Body); err != nil {
+	// NOTE: By default when no key is specified this function will return all
+	// the objects present in the given bucket in XML format. Convert this
+	// XML output to JSON format.
+	if c.s3KeyPrefix+path == "/" {
+		body, err = xj.Convert(body)
+		if err != nil {
+			log.Printf("Error converting XML to JSON")
+			panic(err)
+		}
+	}
+
+	if _, err := io.Copy(w, body); err != nil {
 		log.Printf("io-copy-error: %+v", err)
-	} // nolint
+	}
 }
 
 func setHeadersFromAwsResponse(w http.ResponseWriter, obj *s3.GetObjectOutput) {
@@ -413,6 +426,7 @@ func s3get(backet, key, rangeHeader string) (*s3.GetObjectOutput, error) {
 		Key:    aws.String(key),
 		Range:  rangeHeaderAwsString,
 	}
+
 	return s3.New(awsSession()).GetObject(req)
 }
 

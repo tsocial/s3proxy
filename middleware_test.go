@@ -12,11 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pquerna/otp/totp"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/gorilla/mux"
+	"github.com/pquerna/otp/totp"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuthorize(t *testing.T) {

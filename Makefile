@@ -5,12 +5,11 @@ deps:
 	dep version || (curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh)
 	dep ensure -v
 
-test: deps
+test:
 	env GOCACHE=/tmp/gocache go test -v -race ./...
 
-build: deps
-	env GOCACHE=/tmp/gocache GOOS=linux CGO_ENABLED=0 go build -ldflags "-X main.date=$(shell date +%Y-%m-%d-%H:%M:%S)" -o s3proxy -a -installsuffix cgo \
-		github.com/tsocial/s3proxy
+build:
+	env GOCACHE=/tmp/gocache GOOS=linux CGO_ENABLED=0 go build -ldflags "-X main.date=$(shell date +%Y-%m-%d-%H:%M:%S)" -o s3proxy -a -installsuffix cgo .
 
 docker_up: build
 	docker-compose -f docker-compose.yaml up -d
